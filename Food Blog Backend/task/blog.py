@@ -17,13 +17,17 @@ def create_or_open_database(database_name):
                    '''CREATE TABLE measures(
                     measure_id INT PRIMARY KEY,
                     measure_name VARCHAR(255) UNIQUE
-                    );''']
+                    );''',
+                   '''CREATE TABLE recipes(
+                   recipe_id INT PRIMARY KEY,
+                   recipe_name VARCHAR(255) NOT NULL,
+                   recipe_description VARCHAR(255)
+                   )''']
 
     for query in sql_queries:
         try:
-            result = cursor.execute(query)
+            cursor.execute(query)
             conn.commit()
-            print(result)
         except sqlite3.OperationalError as e:
             if "already exists" in str(e):
                 print(f"Table already exists {query}")
@@ -40,17 +44,44 @@ def insert_table(conn, curr):
 
     for key in data.keys():
         for ids, name in enumerate(data[key]):
-            query = (f"INSERT INTO {key} "
+            query = (f"INSERT OR REPLACE INTO {key} "
                      f"VALUES ({ids}, '{name}');")
+            print(query)
             try:
-                result = curr.execute(query)
+                curr.execute(query)
                 conn.commit()
-                print(result)
             except sqlite3.OperationalError as e:
                 if "already exists" in str(e):
                     print(f"Table already exists {query}")
                 else:
                     raise
+
+
+def insert_recipe(conn, curr, name, description):
+    last_id = 0
+    id_query = f"SELECT MAX(recipe_id) FROM recipes"
+    try:
+        curr.execute(id_query)
+        conn.commit()
+        result = curr.fetchone()[0]
+        if result is not None:
+            last_id = result
+    except sqlite3.OperationalError as e:
+        if "already exists" in str(e):
+            print(f"Table already exists {id_query}")
+        else:
+            raise
+
+    query = (f"INSERT INTO recipes "
+             f"VALUES ({last_id + 1}, '{name}', '{description}');")
+    try:
+        curr.execute(query)
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        if "already exists" in str(e):
+            print(f"Table already exists {query}")
+        else:
+            raise
 
 
 if __name__ == "__main__":
@@ -60,4 +91,14 @@ if __name__ == "__main__":
 
     conn, curr = create_or_open_database(args.database_name)
     insert_table(conn, curr)
+
+    # MENU
+    print("Pass the empty recipe to exit.")
+    while True:
+        recipe_name = input("Recipe name: ")
+        if recipe_name == '':
+            break
+        recipe_description = input("Recipe description: ")
+        insert_recipe(conn, curr, recipe_name, recipe_description)
+
     conn.close()
