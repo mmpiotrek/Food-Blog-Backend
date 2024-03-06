@@ -207,5 +207,8 @@ files:
       if __name__ == '__main__':    FoodBlogStage1().run_tests()
     learner_created: false
 feedback_link: https://hyperskill.org/learn/step/12376#comment
-status: Unchecked
-record: -1
+status: Solved
+feedback:
+  message: Congratulations!
+  time: "Wed, 06 Mar 2024 21:06:05 UTC"
+record: 3

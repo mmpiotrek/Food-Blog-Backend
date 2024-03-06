@@ -197,15 +197,9 @@ files:
       
       if __name__ == '__main__':    FoodBlogStage1().run_tests()
     learner_created: false
-  - name: food_blog.db
-    visible: true
-    learner_created: true
-  - name: food_blog.db-journal
-    visible: true
-    learner_created: true
 feedback_link: https://hyperskill.org/learn/step/12375#comment
 status: Solved
 feedback:
   message: Congratulations!
   time: "Tue, 20 Feb 2024 10:56:56 UTC"
-record: -1
+record: 2
