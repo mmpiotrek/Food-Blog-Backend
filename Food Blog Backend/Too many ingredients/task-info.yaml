@@ -213,6 +213,10 @@ files:
       
       if __name__ == '__main__':    FoodBlogStage1().run_tests()
     learner_created: false
+  - name: food_blog.db
+    visible: true
+    is_binary: true
+    learner_created: true
 feedback_link: https://hyperskill.org/learn/step/12377#comment
 status: Unchecked
 record: 4
