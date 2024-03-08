@@ -9,6 +9,7 @@ class FoodBlogDataset:
 
         self.serve_id = 0
         self.recipe_id = 0
+        self.quantity_id = 0
 
         self.create_tables()
         self.insert_tables()
@@ -52,16 +53,23 @@ class FoodBlogDataset:
                 FOREIGN KEY(recipe_id) REFERENCES recipes(recipe_id)
                 FOREIGN KEY(meal_id) REFERENCES meals(meal_id)
             );
+            
+            CREATE TABLE IF NOT EXISTS quantity(
+                quantity_id INT PRIMARY KEY,
+                measure_id INT NOT NULL,
+                ingredient_id INT NOT NULL,
+                quantity INT NOT NULL,
+                recipe_id INT NOT NULL,
+                FOREIGN KEY(measure_id) REFERENCES measures(measure_id)
+                FOREIGN KEY(ingredient_id) REFERENCES ingredients(ingredient_id)
+                FOREIGN KEY(recipe_id) REFERENCES recipes(recipe_id)
+            );
         '''
 
         self.cursor.executescript(create_tables_query)
         self.conn.commit()
 
     def insert_tables(self):
-        data = {"meals": ("breakfast", "brunch", "lunch", "supper"),
-                "ingredients": ("milk", "cacao", "strawberry", "blueberry", "blackberry", "sugar"),
-                "measures": ("ml", "g", "l", "cup", "tbsp", "tsp", "dsp", "")}
-
         meals_data = [
             (1, "breakfast"),
             (2, "brunch"),
@@ -112,6 +120,24 @@ class FoodBlogDataset:
         except sqlite3.OperationalError as e:
             self.handle_sql_error(e, f"Error inserting recipe: {name}")
 
+    def insert_quantity(self, user_measure_id, user_ingredient_id, quantity):
+        try:
+            self.cursor.execute("SELECT MAX(quantity_id) FROM quantity")
+            self.conn.commit()
+            last_id = self.cursor.fetchone()[0] or 0
+        except sqlite3.OperationalError as e:
+            self.handle_sql_error(e, "Error retrieving last quantity id")
+            last_id = 0
+
+        self.quantity_id = last_id + 1
+
+        query = "INSERT INTO quantity VALUES (?, ?, ?, ?, ?);"
+        try:
+            self.cursor.execute(query, (self.quantity_id, user_measure_id, user_ingredient_id, quantity, self.recipe_id))
+            self.conn.commit()
+        except sqlite3.OperationalError as e:
+            self.handle_sql_error(e, f"Error inserting quantity: {quantity}")
+
     def available_meals(self):
         sql_query = "SELECT * FROM meals"
         self.cursor.execute(sql_query)
@@ -120,6 +146,18 @@ class FoodBlogDataset:
         for row in result:
             meal_id, meal_name = row
             print(f"{meal_id}) {meal_name}")
+
+    def available_measures(self):
+        sql_query = "SELECT * FROM measures"
+        self.cursor.execute(sql_query)
+        self.conn.commit()
+        return self.cursor.fetchall()
+
+    def available_ingredients(self):
+        sql_query = "SELECT * FROM ingredients"
+        self.cursor.execute(sql_query)
+        self.conn.commit()
+        return self.cursor.fetchall()
 
     def meals_to_serve(self, meal_ids: list):
         for meal_id in meal_ids:
@@ -161,4 +199,51 @@ if __name__ == "__main__":
         database.available_meals()
         service_time = list(map(int, input("When the dish can be served:").split(" ")))
         database.meals_to_serve(service_time)
+
+        while True:
+            user_ingredient_input = input("Input quantity of ingredient <press enter to stop>:").split(" ")
+
+            if user_ingredient_input == ['']:
+                break
+
+            if len(user_ingredient_input) == 3:
+                user_quantity = user_ingredient_input[0]
+                user_measure = user_ingredient_input[1]
+                user_ingredient = user_ingredient_input[2]
+
+                selected_measure_id = None
+                for m in database.available_measures():
+                    measure_id, measure_name = m
+                    if measure_name.startswith(user_measure):
+                        if selected_measure_id is not None:
+                            selected_measure_id = None
+                            break
+                        selected_measure_id = measure_id
+
+                if selected_measure_id is None:
+                    print("The measure is not conclusive!")
+                    continue
+
+            elif len(user_ingredient_input) == 2:
+                user_quantity = user_ingredient_input[0]
+                selected_measure_id = ''
+                user_ingredient = user_ingredient_input[1]
+            else:
+                print("Wrong input")
+                continue
+
+            selected_ingredient_id = None
+            for i in database.available_ingredients():
+                ingredient_id, ingredient_name = i
+                if user_ingredient in ingredient_name:
+                    if selected_ingredient_id is not None:
+                        selected_ingredient_id = None
+                        break
+                    selected_ingredient_id = ingredient_id
+
+            if selected_ingredient_id is None:
+                print("The ingredient is not conclusive!")
+                continue
+
+            database.insert_quantity(int(selected_measure_id), int(selected_ingredient_id), int(user_quantity))
     database.close_connection()
